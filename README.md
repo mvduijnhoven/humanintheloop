@@ -1,71 +1,105 @@
-# humanintheloop README
+# Human in the Loop
 
-This is the README for your extension "humanintheloop". After writing up a brief description, we recommend including the following sections.
+A VS Code extension that provides language model tools for getting human feedback and choices during AI interactions.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+This extension provides two powerful language model tools that enable AI assistants to request human input when needed:
 
-For example if there is an image subfolder under your extension project workspace:
+### 🗨️ Human Feedback Tool (`humanInTheLoopFeedback`)
 
-\!\[feature X\]\(images/feature-x.png\)
+Allows language models to request detailed feedback from users through an interactive dialog:
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- **Markdown Support**: Displays prompts with rich markdown formatting (bold, italic, code blocks)
+- **Multi-line Input**: Provides a resizable text area for detailed responses
+- **Keyboard Shortcuts**: Submit with Ctrl+Enter for quick interaction
+- **VS Code Theme Integration**: Matches your editor's appearance
+
+**Example Usage:**
+```json
+{
+  "prompt": "Please review this code and provide feedback:\n\n```javascript\nfunction add(a, b) {\n  return a + b;\n}\n```\n\nWhat improvements would you suggest?"
+}
+```
+
+### 🎯 Human Choice Tool (`humanInTheLoopChoice`)
+
+Enables language models to present multiple options and get user selections:
+
+- **Dynamic Button Layout**: Creates buttons for each choice option
+- **Responsive Grid**: Adapts to different numbers of choices
+- **Clear Visual Hierarchy**: Distinguishes between choices and cancel options
+- **Keyboard Navigation**: ESC key to cancel
+
+**Example Usage:**
+```json
+{
+  "prompt": "Which color scheme would you prefer for the website?",
+  "choices": ["Blue & White", "Dark Theme", "Green & Gold", "Minimalist Gray"]
+}
+```
+
+## How It Works
+
+Both tools open dedicated webview panels that:
+
+1. Display the markdown-formatted prompt clearly at the top
+2. Provide appropriate input mechanisms (text area or buttons)
+3. Return the user's response to the language model
+4. Handle cancellation gracefully
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- VS Code version 1.104.0 or higher
+- No additional dependencies required
 
-## Extension Settings
+## Language Model Integration
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+These tools are designed to be used by language models (like GitHub Copilot) to gather human input during conversations. They are registered as language model tools and can be invoked programmatically.
 
-For example:
+### Tool Schemas
 
-This extension contributes the following settings:
+**humanInTheLoopFeedback:**
+- `prompt` (string, required): Markdown-formatted text to display to the user
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+**humanInTheLoopChoice:**
+- `prompt` (string, required): Markdown-formatted question to display
+- `choices` (array of strings, required): Available options for the user to choose from
+
+## Use Cases
+
+- **Code Review**: Get human feedback on generated code
+- **Design Decisions**: Present multiple implementation approaches
+- **Content Creation**: Choose between different writing styles or formats
+- **Configuration**: Select preferences for tool behavior
+- **Quality Assurance**: Validate AI-generated content before proceeding
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Webview panels may not retain focus in some VS Code configurations
+- Very long choice lists may require scrolling
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
-
 ### 1.0.0
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+Initial release featuring:
+- Human feedback tool with markdown support and multi-line input
+- Human choice tool with dynamic button generation
+- Full VS Code theme integration
+- Keyboard shortcuts and accessibility features
 
 ---
 
-## Following extension guidelines
+## Development
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+This extension is built using:
+- TypeScript
+- VS Code Extension API
+- Webview API for custom UI components
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+## License
 
-## Working with Markdown
+See LICENSE file for details.
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Enjoy seamless human-AI collaboration!**
