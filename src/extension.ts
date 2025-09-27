@@ -168,6 +168,169 @@ function getWebviewContent(prompt: string): string {
 </html>`;
 }
 
+async function showChoiceDialog(prompt: string, choices: string[]): Promise<string> {
+	return new Promise((resolve, reject) => {
+		let isResolved = false;
+		
+		const panel = vscode.window.createWebviewPanel(
+			'humanChoice',
+			'Human Choice',
+			vscode.ViewColumn.One,
+			{
+				enableScripts: true,
+				retainContextWhenHidden: true
+			}
+		);
+
+		panel.webview.html = getChoiceWebviewContent(prompt, choices);
+
+		panel.webview.onDidReceiveMessage(
+			message => {
+				switch (message.command) {
+					case 'choice':
+						if (!isResolved) {
+							isResolved = true;
+							panel.dispose();
+							resolve(message.choice);
+						}
+						return;
+					case 'cancel':
+						if (!isResolved) {
+							isResolved = true;
+							panel.dispose();
+							reject(new Error('User cancelled choice'));
+						}
+						return;
+				}
+			}
+		);
+
+		panel.onDidDispose(() => {
+			if (!isResolved) {
+				isResolved = true;
+				reject(new Error('User cancelled choice'));
+			}
+		});
+	});
+}
+
+function getChoiceWebviewContent(prompt: string, choices: string[]): string {
+	const choiceButtons = choices.map((choice, index) => 
+		`<button class="choice-btn" onclick="selectChoice('${choice.replace(/'/g, "\\'")}')">
+			${choice}
+		</button>`
+	).join('\n\t\t');
+
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Human Choice</title>
+	<style>
+		body {
+			font-family: var(--vscode-font-family);
+			font-size: var(--vscode-font-size);
+			color: var(--vscode-foreground);
+			background-color: var(--vscode-editor-background);
+			padding: 20px;
+			margin: 0;
+		}
+		.prompt {
+			margin-bottom: 20px;
+			padding: 15px;
+			background-color: var(--vscode-textBlockQuote-background);
+			border-left: 4px solid var(--vscode-textBlockQuote-border);
+			border-radius: 4px;
+		}
+		.choices-container {
+			margin-bottom: 20px;
+		}
+		.choices-grid {
+			display: grid;
+			gap: 10px;
+			grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+			margin-bottom: 15px;
+		}
+		button {
+			padding: 12px 16px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-family: var(--vscode-font-family);
+			font-size: var(--vscode-font-size);
+			transition: background-color 0.2s;
+		}
+		.choice-btn {
+			background-color: var(--vscode-button-background);
+			color: var(--vscode-button-foreground);
+			min-height: 40px;
+		}
+		.choice-btn:hover {
+			background-color: var(--vscode-button-hoverBackground);
+		}
+		.cancel-btn {
+			background-color: var(--vscode-button-secondaryBackground);
+			color: var(--vscode-button-secondaryForeground);
+			width: 100px;
+		}
+		.cancel-btn:hover {
+			background-color: var(--vscode-button-secondaryHoverBackground);
+		}
+		.cancel-container {
+			text-align: center;
+			border-top: 1px solid var(--vscode-widget-border);
+			padding-top: 15px;
+		}
+	</style>
+</head>
+<body>
+	<div class="prompt">
+		<div id="promptContent"></div>
+	</div>
+	<div class="choices-container">
+		<div class="choices-grid">
+			${choiceButtons}
+		</div>
+		<div class="cancel-container">
+			<button class="cancel-btn" onclick="cancel()">Cancel</button>
+		</div>
+	</div>
+
+	<script>
+		const vscode = acquireVsCodeApi();
+		
+		// Set the prompt content (supporting basic markdown)
+		document.getElementById('promptContent').innerHTML = \`${prompt.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`
+			.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
+			.replace(/\\*(.*?)\\*/g, '<em>$1</em>')
+			.replace(/\`(.*?)\`/g, '<code>$1</code>')
+			.replace(/\\n/g, '<br>');
+
+		function selectChoice(choice) {
+			vscode.postMessage({
+				command: 'choice',
+				choice: choice
+			});
+		}
+
+		function cancel() {
+			vscode.postMessage({
+				command: 'cancel'
+			});
+		}
+
+		// Allow keyboard navigation
+		document.addEventListener('keydown', function(e) {
+			if (e.key === 'Escape') {
+				cancel();
+			}
+		});
+	</script>
+</body>
+</html>`;
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	// Register the feedback tool
 	const feedbackTool = vscode.lm.registerTool('humanInTheLoopFeedback', {
@@ -188,24 +351,11 @@ export function activate(context: vscode.ExtensionContext) {
 		async invoke(options) {
 			const input = options.input as { prompt: string, choices: string[] };
 			
-			// Create quick pick items from choices
-			const items = input.choices.map(choice => ({ label: choice }));
-			
-			// Add cancel option
-			items.push({ label: '$(close) Cancel' });
-
-			// Show quick pick to get user's choice
-			const selectedItem = await vscode.window.showQuickPick(items, {
-				placeHolder: input.prompt,
-				ignoreFocusOut: true
-			});
-
-			if (!selectedItem || selectedItem.label.includes('Cancel')) {
-				throw new Error('User cancelled choice');
-			}
+			// Show custom choice dialog
+			const choice = await showChoiceDialog(input.prompt, input.choices);
 
 			return new vscode.LanguageModelToolResult([
-				new vscode.LanguageModelTextPart(selectedItem.label)
+				new vscode.LanguageModelTextPart(choice)
 			]);
 		}
 	});
