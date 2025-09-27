@@ -12,10 +12,51 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
+    "languageModelTools": [
       {
-        "command": "humanintheloop.helloWorld",
-        "title": "Hello World"
+        "name": "humanInTheLoopFeedback",
+        "displayName": "Human Feedback",
+        "modelDescription": "Get feedback from a human user. Accepts a markdown-formatted prompt string and returns the user's feedback text.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "HumanFeedback",
+        "icon": "🧑‍💻",
+        "userDescription": "Ask for free-format user feedback.",
+        "inputSchema": {
+          "type": "object",
+          "required": ["prompt"],
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "description": "The markdown-formatted prompt to show to the user"
+            }
+          }
+        }
+      },
+      {
+        "name": "humanInTheLoopChoice",
+        "displayName": "Human Choice",
+        "modelDescription": "Present choices to a human user and get their selection. Accepts a markdown-formatted prompt string and an array of choice strings.",
+        "canBeReferencedInPrompt": true,
+        "toolReferenceName": "HumanChoice",
+        "icon": "🧑‍💻",
+        "userDescription": "Ask for a choice from the user.",
+        "inputSchema": {
+          "type": "object",
+          "required": ["prompt", "choices"],
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "description": "The markdown-formatted prompt to show to the user"
+            },
+            "choices": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The array of choices to present to the user"
+            }
+          }
+        }
       }
     ]
   },
