@@ -1,6 +1,22 @@
 import * as vscode from 'vscode';
 
+function getNonce(): string {
+	const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	let text = '';
+	for (let i = 0; i < 32; i++) {
+		text += possible.charAt(Math.floor(Math.random() * possible.length));
+	}
+	return text;
+}
+
+async function renderMarkdownToHtml(markdown: string): Promise<string> {
+	const rendered = await vscode.commands.executeCommand<string>('markdown.api.render', markdown);
+	return rendered ?? markdown;
+}
+
 async function showFeedbackDialog(prompt: string): Promise<string> {
+	const promptHtml = await renderMarkdownToHtml(prompt);
+
 	return new Promise((resolve, reject) => {
 		let isResolved = false;
 		
@@ -14,7 +30,7 @@ async function showFeedbackDialog(prompt: string): Promise<string> {
 			}
 		);
 
-		panel.webview.html = getWebviewContent(prompt);
+		panel.webview.html = getFeedbackWebviewContent(prompt, promptHtml);
 
 		panel.webview.onDidReceiveMessage(
 			message => {
@@ -46,8 +62,9 @@ async function showFeedbackDialog(prompt: string): Promise<string> {
 	});
 }
 
-function getWebviewContent(prompt: string): string {
+function getFeedbackWebviewContent(prompt: string, promptHtml: string): string {
 	const promptJson = JSON.stringify(prompt);
+	const nonce = getNonce();
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,6 +72,9 @@ function getWebviewContent(prompt: string): string {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Human Feedback</title>
 	<style>
+		:root {
+			color-scheme: var(--vscode-color-scheme);
+		}
 		body {
 			font-family: var(--vscode-font-family);
 			font-size: var(--vscode-font-size);
@@ -102,6 +122,26 @@ function getWebviewContent(prompt: string): string {
 			min-width: 70px;
 			font-size: calc(var(--vscode-font-size) * 0.85);
 			color: var(--vscode-foreground);
+		}
+		.markdown-body {
+			table {
+				border-collapse: collapse;
+				width: 100%;
+				margin-top: 1em;
+			}
+			table th,
+			table td {
+				border: 1px solid var(--vscode-editorWidget-border);
+				padding: 6px 10px;
+			}
+			h1, h2, h3, h4, h5, h6 {
+				border-bottom: 1px solid var(--vscode-editorWidget-border);
+				padding-bottom: 0.3em;
+			}
+			code, pre {
+				background-color: var(--vscode-textPreformat-background);
+				border-radius: 4px;
+			}
 		}
 		.feedback-container {
 			margin-bottom: 20px;
@@ -158,7 +198,7 @@ function getWebviewContent(prompt: string): string {
 				<span id="copyStatus" class="copy-status" role="status" aria-live="polite"></span>
 			</div>
 		</div>
-		<div id="promptContent"></div>
+		<div id="promptContent" class="markdown-body">${promptHtml}</div>
 	</div>
 	<div class="feedback-container">
 		<label for="feedback">Your feedback:</label>
@@ -169,22 +209,9 @@ function getWebviewContent(prompt: string): string {
 		<button class="cancel-btn" onclick="cancel()">Cancel</button>
 	</div>
 
-	<script>
+	<script nonce="${nonce}">
 		const vscode = acquireVsCodeApi();
 		const rawPrompt = ${promptJson};
-
-		document.getElementById('promptContent').innerHTML = renderMarkdown(rawPrompt);
-
-		function renderMarkdown(text) {
-			return text
-				.replace(/&/g, '&amp;')
-				.replace(/</g, '&lt;')
-				.replace(/>/g, '&gt;')
-				.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
-				.replace(/\\*(.*?)\\*/g, '<em>$1</em>')
-				.replace(/\`(.*?)\`/g, '<code>$1</code>')
-				.replace(/\\n/g, '<br>');
-		}
 
 		async function copyPrompt() {
 			const status = document.getElementById('copyStatus');
@@ -243,6 +270,8 @@ function getWebviewContent(prompt: string): string {
 }
 
 async function showChoiceDialog(prompt: string, choices: string[]): Promise<string> {
+	const promptHtml = await renderMarkdownToHtml(prompt);
+
 	return new Promise((resolve, reject) => {
 		let isResolved = false;
 		
@@ -256,7 +285,7 @@ async function showChoiceDialog(prompt: string, choices: string[]): Promise<stri
 			}
 		);
 
-		panel.webview.html = getChoiceWebviewContent(prompt, choices);
+		panel.webview.html = getChoiceWebviewContent(prompt, promptHtml, choices);
 
 		panel.webview.onDidReceiveMessage(
 			message => {
@@ -288,13 +317,14 @@ async function showChoiceDialog(prompt: string, choices: string[]): Promise<stri
 	});
 }
 
-function getChoiceWebviewContent(prompt: string, choices: string[]): string {
+function getChoiceWebviewContent(prompt: string, promptHtml: string, choices: string[]): string {
 	const choiceButtons = choices.map(choice => 
 		`<button class="choice-btn" onclick="selectChoice('${choice.replace(/'/g, "\\'")}')">
 			${choice}
 		</button>`
 	).join('\n\t\t');
 	const promptJson = JSON.stringify(prompt);
+	const nonce = getNonce();
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -303,6 +333,9 @@ function getChoiceWebviewContent(prompt: string, choices: string[]): string {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Human Choice</title>
 	<style>
+		:root {
+			color-scheme: var(--vscode-color-scheme);
+		}
 		body {
 			font-family: var(--vscode-font-family);
 			font-size: var(--vscode-font-size);
@@ -350,6 +383,26 @@ function getChoiceWebviewContent(prompt: string, choices: string[]): string {
 			min-width: 70px;
 			font-size: calc(var(--vscode-font-size) * 0.85);
 			color: var(--vscode-foreground);
+		}
+		.markdown-body {
+			table {
+				border-collapse: collapse;
+				width: 100%;
+				margin-top: 1em;
+			}
+			table th,
+			table td {
+				border: 1px solid var(--vscode-editorWidget-border);
+				padding: 6px 10px;
+			}
+			h1, h2, h3, h4, h5, h6 {
+				border-bottom: 1px solid var(--vscode-editorWidget-border);
+				padding-bottom: 0.3em;
+			}
+			code, pre {
+				background-color: var(--vscode-textPreformat-background);
+				border-radius: 4px;
+			}
 		}
 		.choices-container {
 			margin-bottom: 20px;
@@ -401,7 +454,7 @@ function getChoiceWebviewContent(prompt: string, choices: string[]): string {
 				<span id="copyStatus" class="copy-status" role="status" aria-live="polite"></span>
 			</div>
 		</div>
-		<div id="promptContent"></div>
+		<div id="promptContent" class="markdown-body">${promptHtml}</div>
 	</div>
 	<div class="choices-container">
 		<div class="choices-grid">
@@ -412,22 +465,9 @@ function getChoiceWebviewContent(prompt: string, choices: string[]): string {
 		</div>
 	</div>
 
-	<script>
+	<script nonce="${nonce}">
 		const vscode = acquireVsCodeApi();
 		const rawPrompt = ${promptJson};
-
-		document.getElementById('promptContent').innerHTML = renderMarkdown(rawPrompt);
-
-		function renderMarkdown(text) {
-			return text
-				.replace(/&/g, '&amp;')
-				.replace(/</g, '&lt;')
-				.replace(/>/g, '&gt;')
-				.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
-				.replace(/\\*(.*?)\\*/g, '<em>$1</em>')
-				.replace(/\`(.*?)\`/g, '<code>$1</code>')
-				.replace(/\\n/g, '<br>');
-		}
 
 		async function copyPrompt() {
 			const status = document.getElementById('copyStatus');
