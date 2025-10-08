@@ -47,6 +47,7 @@ async function showFeedbackDialog(prompt: string): Promise<string> {
 }
 
 function getWebviewContent(prompt: string): string {
+	const promptJson = JSON.stringify(prompt);
 	return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -68,6 +69,39 @@ function getWebviewContent(prompt: string): string {
 			background-color: var(--vscode-textBlockQuote-background);
 			border-left: 4px solid var(--vscode-textBlockQuote-border);
 			border-radius: 4px;
+		}
+		.prompt-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			margin-bottom: 12px;
+		}
+		.prompt-title {
+			font-weight: bold;
+		}
+		.copy-actions {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.copy-btn {
+			padding: 4px 10px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			background-color: var(--vscode-button-secondaryBackground);
+			color: var(--vscode-button-secondaryForeground);
+			font-family: var(--vscode-font-family);
+			font-size: calc(var(--vscode-font-size) * 0.9);
+		}
+		.copy-btn:hover {
+			background-color: var(--vscode-button-secondaryHoverBackground);
+		}
+		.copy-status {
+			min-width: 70px;
+			font-size: calc(var(--vscode-font-size) * 0.85);
+			color: var(--vscode-foreground);
 		}
 		.feedback-container {
 			margin-bottom: 20px;
@@ -117,6 +151,13 @@ function getWebviewContent(prompt: string): string {
 </head>
 <body>
 	<div class="prompt">
+		<div class="prompt-header">
+			<span class="prompt-title">Prompt</span>
+			<div class="copy-actions">
+				<button id="copyPromptButton" class="copy-btn" onclick="copyPrompt()">Copy Prompt</button>
+				<span id="copyStatus" class="copy-status" role="status" aria-live="polite"></span>
+			</div>
+		</div>
 		<div id="promptContent"></div>
 	</div>
 	<div class="feedback-container">
@@ -130,13 +171,48 @@ function getWebviewContent(prompt: string): string {
 
 	<script>
 		const vscode = acquireVsCodeApi();
-		
-		// Set the prompt content (supporting basic markdown)
-		document.getElementById('promptContent').innerHTML = \`${prompt.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`
-			.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
-			.replace(/\\*(.*?)\\*/g, '<em>$1</em>')
-			.replace(/\`(.*?)\`/g, '<code>$1</code>')
-			.replace(/\\n/g, '<br>');
+		const rawPrompt = ${promptJson};
+
+		document.getElementById('promptContent').innerHTML = renderMarkdown(rawPrompt);
+
+		function renderMarkdown(text) {
+			return text
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
+				.replace(/\\*(.*?)\\*/g, '<em>$1</em>')
+				.replace(/\`(.*?)\`/g, '<code>$1</code>')
+				.replace(/\\n/g, '<br>');
+		}
+
+		async function copyPrompt() {
+			const status = document.getElementById('copyStatus');
+			const button = document.getElementById('copyPromptButton');
+			status.textContent = '';
+			try {
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					await navigator.clipboard.writeText(rawPrompt);
+				} else {
+					const helper = document.createElement('textarea');
+					helper.value = rawPrompt;
+					helper.setAttribute('readonly', '');
+					helper.style.position = 'absolute';
+					helper.style.left = '-9999px';
+					document.body.appendChild(helper);
+					helper.select();
+					document.execCommand('copy');
+					document.body.removeChild(helper);
+				}
+				status.textContent = 'Copied!';
+			} catch (error) {
+				status.textContent = 'Copy failed';
+			}
+			button.focus();
+			setTimeout(() => {
+				status.textContent = '';
+			}, 2000);
+		}
 
 		function submitFeedback() {
 			const feedback = document.getElementById('feedback').value;
@@ -154,10 +230,8 @@ function getWebviewContent(prompt: string): string {
 			});
 		}
 
-		// Focus the textarea when the page loads
 		document.getElementById('feedback').focus();
 
-		// Allow Ctrl+Enter to submit
 		document.getElementById('feedback').addEventListener('keydown', function(e) {
 			if (e.ctrlKey && e.key === 'Enter') {
 				submitFeedback();
@@ -215,11 +289,12 @@ async function showChoiceDialog(prompt: string, choices: string[]): Promise<stri
 }
 
 function getChoiceWebviewContent(prompt: string, choices: string[]): string {
-	const choiceButtons = choices.map((choice, index) => 
+	const choiceButtons = choices.map(choice => 
 		`<button class="choice-btn" onclick="selectChoice('${choice.replace(/'/g, "\\'")}')">
 			${choice}
 		</button>`
 	).join('\n\t\t');
+	const promptJson = JSON.stringify(prompt);
 
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -242,6 +317,39 @@ function getChoiceWebviewContent(prompt: string, choices: string[]): string {
 			background-color: var(--vscode-textBlockQuote-background);
 			border-left: 4px solid var(--vscode-textBlockQuote-border);
 			border-radius: 4px;
+		}
+		.prompt-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 12px;
+			margin-bottom: 12px;
+		}
+		.prompt-title {
+			font-weight: bold;
+		}
+		.copy-actions {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.copy-btn {
+			padding: 4px 10px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			background-color: var(--vscode-button-secondaryBackground);
+			color: var(--vscode-button-secondaryForeground);
+			font-family: var(--vscode-font-family);
+			font-size: calc(var(--vscode-font-size) * 0.9);
+		}
+		.copy-btn:hover {
+			background-color: var(--vscode-button-secondaryHoverBackground);
+		}
+		.copy-status {
+			min-width: 70px;
+			font-size: calc(var(--vscode-font-size) * 0.85);
+			color: var(--vscode-foreground);
 		}
 		.choices-container {
 			margin-bottom: 20px;
@@ -286,6 +394,13 @@ function getChoiceWebviewContent(prompt: string, choices: string[]): string {
 </head>
 <body>
 	<div class="prompt">
+		<div class="prompt-header">
+			<span class="prompt-title">Prompt</span>
+			<div class="copy-actions">
+				<button id="copyPromptButton" class="copy-btn" onclick="copyPrompt()">Copy Prompt</button>
+				<span id="copyStatus" class="copy-status" role="status" aria-live="polite"></span>
+			</div>
+		</div>
 		<div id="promptContent"></div>
 	</div>
 	<div class="choices-container">
@@ -299,13 +414,48 @@ function getChoiceWebviewContent(prompt: string, choices: string[]): string {
 
 	<script>
 		const vscode = acquireVsCodeApi();
-		
-		// Set the prompt content (supporting basic markdown)
-		document.getElementById('promptContent').innerHTML = \`${prompt.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`
-			.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
-			.replace(/\\*(.*?)\\*/g, '<em>$1</em>')
-			.replace(/\`(.*?)\`/g, '<code>$1</code>')
-			.replace(/\\n/g, '<br>');
+		const rawPrompt = ${promptJson};
+
+		document.getElementById('promptContent').innerHTML = renderMarkdown(rawPrompt);
+
+		function renderMarkdown(text) {
+			return text
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
+				.replace(/\\*(.*?)\\*/g, '<em>$1</em>')
+				.replace(/\`(.*?)\`/g, '<code>$1</code>')
+				.replace(/\\n/g, '<br>');
+		}
+
+		async function copyPrompt() {
+			const status = document.getElementById('copyStatus');
+			const button = document.getElementById('copyPromptButton');
+			status.textContent = '';
+			try {
+				if (navigator.clipboard && navigator.clipboard.writeText) {
+					await navigator.clipboard.writeText(rawPrompt);
+				} else {
+					const helper = document.createElement('textarea');
+					helper.value = rawPrompt;
+					helper.setAttribute('readonly', '');
+					helper.style.position = 'absolute';
+					helper.style.left = '-9999px';
+					document.body.appendChild(helper);
+					helper.select();
+					document.execCommand('copy');
+					document.body.removeChild(helper);
+				}
+				status.textContent = 'Copied!';
+			} catch (error) {
+				status.textContent = 'Copy failed';
+			}
+			button.focus();
+			setTimeout(() => {
+				status.textContent = '';
+			}, 2000);
+		}
 
 		function selectChoice(choice) {
 			vscode.postMessage({
@@ -320,7 +470,6 @@ function getChoiceWebviewContent(prompt: string, choices: string[]): string {
 			});
 		}
 
-		// Allow keyboard navigation
 		document.addEventListener('keydown', function(e) {
 			if (e.key === 'Escape') {
 				cancel();
