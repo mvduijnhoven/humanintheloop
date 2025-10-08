@@ -66,7 +66,10 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "package:vsix": "npm run compile && vsce package --out humanintheloop.vsix",
+    "install:vsix": "npm run package:vsix && code --install-extension humanintheloop.vsix",
+    "uninstall:vsix": "code --uninstall-extension humanintheloop"
   },
   "devDependencies": {
     "@types/vscode": "^1.104.0",
@@ -77,6 +80,7 @@
     "eslint": "^9.34.0",
     "typescript": "^5.9.2",
     "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^2.25.0"
   }
 }

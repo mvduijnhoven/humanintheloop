@@ -76,7 +76,6 @@ These tools are designed to be used by language models (like GitHub Copilot) to 
 
 ## Known Issues
 
-- Webview panels may not retain focus in some VS Code configurations
 - Very long choice lists may require scrolling
 
 ## Release Notes
@@ -103,3 +102,49 @@ This extension is built using:
 See LICENSE file for details.
 
 **Enjoy seamless human-AI collaboration!**
+
+## Installation
+
+You can install the extension directly from the source repository by packaging it into a VSIX file. Choose one of the options below:
+
+### Option 1 – One-step install (recommended)
+
+```bash
+npm run install:vsix
+```
+
+This command compiles the extension, creates a `humanintheloop.vsix` file, and installs it into your local VS Code using the `code` CLI. Make sure the `code` command is available on your PATH (VS Code ➜ Command Palette ➜ "Shell Command: Install 'code' command in PATH" on macOS, or install VS Code with PATH integration on Windows/Linux).
+
+### Option 2 – Build and install manually
+
+1. Install dependencies
+   ```bash
+   npm install
+   ```
+2. Compile the extension
+   ```bash
+   npm run compile
+   ```
+3. Package the extension (outputs `humanintheloop.vsix`)
+   ```bash
+   npm run package:vsix
+   ```
+4. Install the VSIX into VS Code
+   ```bash
+   code --install-extension humanintheloop.vsix
+   ```
+
+### Uninstalling
+
+To remove the extension from VS Code:
+
+- Using the helper script (requires `code` CLI):
+  ```bash
+  npm run uninstall:vsix
+  ```
+- Or manually via the CLI:
+  ```bash
+  code --uninstall-extension humanintheloop
+  ```
+
+After installation, reload VS Code if prompted. The language model tools will be available to copilot-compatible models immediately after activation.
